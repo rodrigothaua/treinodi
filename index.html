@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Treino Diário</title>
+    <!-- Incluindo o CDN do Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos para o card de treino ativo */
+        .treino-active {
+            box-shadow: 0 15px 30px -5px rgba(79, 70, 229, 0.4), 0 8px 15px -3px rgba(79, 70, 229, 0.2);
+            border: 4px solid #4f46e5; /* Borda de destaque mais forte */
+            animation: fadeInScale 0.4s ease-out;
+        }
+
+        /* Animação para quando o treino muda */
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        /* Estilo base para todos os cards agora que só um é exibido */
+        .treino-card {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        /* Estilo para a lista de exercícios */
+        .treino-exercicio {
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.75rem;
+            padding-top: 0.75rem;
+        }
+        .treino-exercicio:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 md:p-8 font-sans">
+
+    <header class="text-center mb-10">
+        <h1 class="text-4xl font-extrabold text-indigo-800">Treino Semanal Diéssica</h1>
+        <p class="text-xl text-indigo-600 mt-2">Foco no Treino de Hoje!</p>
+        <p id="data-atual" class="text-lg font-semibold text-gray-600 mt-4"></p>
+    </header>
+
+    <main class="max-w-xl mx-auto">
+        <!-- Seletor de Dia para Revisão/Planejamento -->
+        <div class="mb-8 flex flex-col sm:flex-row justify-center items-center space-y-3 sm:space-y-0 sm:space-x-4 p-4 bg-white rounded-xl shadow-lg">
+            <label for="day-selector" class="text-lg font-bold text-gray-700">Visualizar Treino:</label>
+            <select id="day-selector" class="px-5 py-3 border-2 border-indigo-400 bg-indigo-50 text-indigo-700 rounded-xl shadow-inner font-semibold focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out w-full sm:w-auto">
+                <!-- Opções preenchidas via JS -->
+            </select>
+        </div>
+
+        <!-- Training Card Container (apenas um card) -->
+        <div id="treinos-container">
+            <!-- O card de treino será injetado aqui pelo JavaScript -->
+        </div>
+    </main>
+
+    <script>
+        // Mapeamento dos treinos e do dia da semana (0=Dom, 1=Seg, 2=Ter, etc.)
+        const treinosSemanais = {
+            1: { // Segunda-feira
+                dia: "SEGUNDA-FEIRA",
+                titulo: "GLÚTEOS / COXA (1 MIN DESCANSO)",
+                exercicios: [
+                    "CADEIRA ABDUTORA (3 x 10)",
+                    "AFUNDO BÚLGARO (3 x 10)",
+                    "AGACHAMENTO LIVRE (3 x 15 - 3 x 12 - 3 x 10)",
+                    "LEG 45 (3 x 12)",
+                    "HACK (3 x 12)",
+                    "ELEVAÇÃO PÉLVICA (3 x 12) + ISOMETRIA"
+                ]
+            },
+            2: { // Terça-feira
+                dia: "TERÇA-FEIRA",
+                titulo: "SUPERIORES / ABDÔMEN",
+                exercicios: [
+                    "PUXADA ALTA (3 x 15) - COSTA",
+                    "REMADA NEUTRA (3 x 15) - COSTA",
+                    "SUPINO RETO (3 x 12)",
+                    "REMADA UNILATERAL (3 x 12)",
+                    "DESENVOLVIMENTO (3 x 12)",
+                    "ELEVAÇÃO LATERAL CADEIRA (3 x 12)",
+                    "TRÍCEPS PULLEY (3 x 12)",
+                    "ABS"
+                ]
+            },
+            3: { // Quarta-feira
+                dia: "QUARTA-FEIRA",
+                titulo: "CÁRDIO",
+                exercicios: [
+                    "TREINO FOCADO EM CONDICIONAMENTO CARDIOVASCULAR"
+                ]
+            },
+            4: { // Quinta-feira
+                dia: "QUINTA-FEIRA",
+                titulo: "POSTERIOR DE COXA (1 MIN DESCANSO)",
+                exercicios: [
+                    "MESA FLEXORA (3 x 12 REP)",
+                    "CADEIRA FLEXORA (3 x 12)",
+                    "STIFF (3 x 15)",
+                    "FLEXORA UNILATERAL OU CANELEIRA (3 x 15)"
+                ]
+            },
+            5: { // Sexta-feira
+                dia: "SEXTA-FEIRA",
+                titulo: "QUADRÍCEPS",
+                exercicios: [
+                    "AGACHAMENTO LIVRE (1 x 15 - 1 x 12 - 1 x 10)",
+                    "LEG 45 (3 x 15)",
+                    "HACK MACHINE (3 x 12)",
+                    "BÚLGARO LEG (3 x 12)",
+                    "CADEIRA EXTENSORA",
+                    "CADEIRA ADUTORA (3 x 12)"
+                ]
+            },
+            6: { // Sábado
+                dia: "SÁBADO",
+                titulo: "DESCANSO ATIVO / MOBILIDADE",
+                exercicios: [
+                    "Caminhada leve ou alongamento e mobilidade articular."
+                ]
+            },
+            0: { // Domingo
+                dia: "DOMINGO",
+                titulo: "DESCANSO TOTAL",
+                exercicios: [
+                    "Dia de descanso. Recupere as energias para a próxima semana!"
+                ]
+            }
+        };
+
+        const diasDaSemana = [
+            { index: 1, nome: "Segunda-feira" },
+            { index: 2, nome: "Terça-feira" },
+            { index: 3, nome: "Quarta-feira" },
+            { index: 4, nome: "Quinta-feira" },
+            { index: 5, nome: "Sexta-feira" },
+            { index: 6, nome: "Sábado" },
+            { index: 0, nome: "Domingo" }
+        ];
+
+        function getDiaAtual() {
+            return new Date().getDay();
+        }
+
+        function setupDaySelector(diaAtualIndex) {
+            const selector = document.getElementById('day-selector');
+            selector.innerHTML = ''; // Limpa opções
+
+            diasDaSemana.forEach(dia => {
+                const option = document.createElement('option');
+                option.value = dia.index;
+                option.textContent = dia.nome;
+                if (dia.index === diaAtualIndex) {
+                    option.selected = true;
+                    option.textContent += " (Hoje)";
+                } else {
+                    option.disabled = true;
+                }
+                selector.appendChild(option);
+            });
+            // Remove o listener para impedir troca de dia
+        }
+
+        function renderTreino(diaIndex, isToday) {
+            const treino = treinosSemanais[diaIndex];
+            const treinosContainer = document.getElementById('treinos-container');
+
+            // Apenas exercícios do dia atual são clicáveis
+            const exerciciosHTML = treino.exercicios.map((ex, idx) => 
+                isToday
+                ? `<li class="treino-exercicio flex items-start">
+                        <svg class="w-5 h-5 mr-3 mt-1 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        <button class="text-base text-indigo-700 font-medium underline hover:text-indigo-900 focus:outline-none" onclick="abrirModalVideo(${diaIndex}, ${idx})">
+                            ${ex}
+                        </button>
+                    </li>`
+                : `<li class="treino-exercicio flex items-start opacity-50 cursor-not-allowed">
+                        <svg class="w-5 h-5 mr-3 mt-1 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        <span class="text-base text-gray-400 font-medium">${ex}</span>
+                    </li>`
+            ).join('');
+
+            // Estrutura do Card
+            treinosContainer.innerHTML = `
+                <div id="treino-dia-${diaIndex}" class="treino-card ${isToday ? 'treino-active' : 'shadow-xl'}">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-2xl font-extrabold ${isToday ? 'text-indigo-700' : 'text-gray-700'}">
+                            ${treino.dia} ${isToday ? '<span class="text-sm font-semibold text-red-500 ml-2">(HOJE)</span>' : ''}
+                        </h2>
+                        ${isToday ? `
+                            <svg class="w-8 h-8 text-green-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        ` : ''}
+                    </div>
+                    <h3 class="text-xl font-bold mb-6 ${isToday ? 'text-green-600' : 'text-indigo-500'} border-b pb-2">
+                        ${treino.titulo}
+                    </h3>
+                    <ul class="list-none p-0 m-0 space-y-2">
+                        ${exerciciosHTML}
+                    </ul>
+                </div>
+            `;
+        }
+
+        function initTreinoSemanal() {
+            const dataAtual = new Date();
+            // Pega o índice do dia atual (0=Dom, 1=Seg...)
+            const diaSemanaIndex = getDiaAtual(); 
+
+            // Formatação da data para exibição
+            const opcoesData = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dataFormatada = dataAtual.toLocaleDateString('pt-BR', opcoesData);
+            document.getElementById('data-atual').textContent = `Hoje é ${dataFormatada}`;
+
+            // 1. Configura o seletor com as opções de dia
+            setupDaySelector(diaSemanaIndex);
+
+            // 2. Renderiza o treino do dia atual por padrão
+            renderTreino(diaSemanaIndex, true);
+        }
+
+        // Para cada exercício, insira o link do vídeo correspondente na ordem dos exercícios de cada dia.
+        // Exemplo: videosYoutube[1][0] = link do vídeo do primeiro exercício de segunda-feira
+        //          videosYoutube[1][1] = link do vídeo do segundo exercício de segunda-feira
+        //          ...
+        //          videosYoutube[2][0] = link do vídeo do primeiro exercício de terça-feira
+        //          ...
+        // Se não houver vídeo, deixe vazio ou remova o item.
+        const videosYoutube = {
+            1: [
+                "https://youtube.com/embed/nabhYLtz8Gg", // CADEIRA ABDUTORA
+                "https://www.youtube.com/embed/cCTC06-Yjqk", //AFUNDO BÚLGARO
+                "https://www.youtube.com/embed/nvVa-WFGwmM", // AGACHAMENTO LIVRE
+                "https://www.youtube.com/embed/D9WR6PoMYxs", // LEG 45
+                "https://www.youtube.com/embed/ZsAu3REJnb0", // HACK
+                "https://www.youtube.com/embed/Nuoo1XgRtGY", // ELEVAÇÃO PÉLVICA
+            ],
+            2: [
+                "https://www.youtube.com/embed/_2MfZAj98tk", // PUXADA ALTA
+                "https://www.youtube.com/embed/r4EmE8I74BQ", // REMADA NEUTRARILogqbMVzQ
+                "https://www.youtube.com/embed/RILogqbMVzQ", // SUPINO RETO
+                "https://www.youtube.com/embed/C2U7EB3G3bk", // REMADA UNILATERAL
+                "https://www.youtube.com/embed/uh0oZorifmM", // DESENVOLVIMENTO
+                "https://www.youtube.com/embed/YbqbspnFnfo", // ELEVAÇÃO LATERAL
+                "https://www.youtube.com/embed/M88Bt4MMpkI" // TRÍCEPS PULLEY
+            ],
+            3: [
+                // "https://www.youtube.com/embed/VIDEO_ID1", // TREINO CARDIO
+            ],
+            4: [
+                "https://www.youtube.com/embed/IXg1PQ_5gmw", // MESA FLEXORA
+                "https://www.youtube.com/embed/T46yKiz8laY", // CADEIRA FLEXORA
+                "https://www.youtube.com/embed/raMtPJQ5f9A", // STIFF
+                "https://www.youtube.com/embed/L7jouj-t01E" // FLEXORA UNILATERAL OU CANELEIRA
+            ],
+            5: [
+                "https://www.youtube.com/embed/nvVa-WFGwmM", // AGACHAMENTO LIVRE
+                "https://www.youtube.com/embed/D9WR6PoMYxs", // LEG 45
+                "https://www.youtube.com/embed/ZsAu3REJnb0", // HACK
+                "https://www.youtube.com/embed/Y_u8jgMKiOI", // BÚLGARO LEG
+                "https://www.youtube.com/embed/PzIfB9MiiX8", // CADEIRA EXTENSORA
+            ],
+            6: [
+                // "https://www.youtube.com/embed/VIDEO_ID1", // Caminhada leve
+            ],
+            0: [
+                // "https://www.youtube.com/embed/VIDEO_ID1", // Descanso
+            ]
+        };
+
+        // Função para abrir o modal e carregar o vídeo
+        function abrirModalVideo(diaIndex, exIndex) {
+            const videoUrl = (videosYoutube[diaIndex] && videosYoutube[diaIndex][exIndex]) ? videosYoutube[diaIndex][exIndex] : null;
+            if (!videoUrl) {
+                alert('Vídeo não disponível para este exercício.');
+                return;
+            }
+            const modal = document.getElementById('modal-video');
+            const iframe = document.getElementById('youtube-iframe');
+            iframe.src = videoUrl;
+            modal.classList.remove('hidden');
+        }
+
+        // Função para fechar o modal
+        function fecharModalVideo() {
+            const modal = document.getElementById('modal-video');
+            const iframe = document.getElementById('youtube-iframe');
+            iframe.src = '';
+            modal.classList.add('hidden');
+        }
+
+        // Inicializa a função quando a página carrega
+        document.addEventListener('DOMContentLoaded', initTreinoSemanal);
+</script>
+
+<!-- Modal para vídeo do YouTube -->
+<div id="modal-video" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden">
+    <div class="bg-transparent relative w-full max-w-xs flex flex-col items-center justify-center">
+        <button onclick="fecharModalVideo()" class="absolute -top-6 right-1 bg-white text-gray-700 hover:text-red-600 rounded-full shadow-lg w-10 h-10 flex items-center justify-center text-2xl font-bold border-none outline-none">
+            &times;
+        </button>
+        <div class="flex items-center justify-center w-[360px] h-[640px] bg-black rounded-xl overflow-hidden">
+            <iframe id="youtube-iframe" width="360" height="640" class="rounded-xl" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
+    </div>
+</div>
+    </script>
+
+</body>
+</html>
