@@ -161,28 +161,46 @@
             const selector = document.getElementById('day-selector');
             selector.innerHTML = ''; // Limpa opções
 
+            // Permite selecionar hoje e dias anteriores, desabilita dias futuros
+            const hoje = diaAtualIndex;
             diasDaSemana.forEach(dia => {
                 const option = document.createElement('option');
                 option.value = dia.index;
                 option.textContent = dia.nome;
+                // Lógica para permitir selecionar hoje e dias anteriores
+                // Considerando semana começando no domingo (0)
+                let isPassadoOuHoje = false;
+                if (hoje >= dia.index && (hoje - dia.index <= 6)) {
+                    isPassadoOuHoje = true;
+                } else if (hoje < dia.index && (7 - dia.index + hoje) >= 0) {
+                    isPassadoOuHoje = false;
+                }
                 if (dia.index === diaAtualIndex) {
                     option.selected = true;
                     option.textContent += " (Hoje)";
-                } else {
+                }
+                if (!isPassadoOuHoje) {
                     option.disabled = true;
                 }
                 selector.appendChild(option);
             });
-            // Remove o listener para impedir troca de dia
+            // Habilita troca de dia para dias passados e hoje
+            selector.addEventListener('change', (event) => {
+                const selectedDayIndex = parseInt(event.target.value);
+                renderTreino(selectedDayIndex, selectedDayIndex === diaAtualIndex || (selectedDayIndex < diaAtualIndex ? true : false));
+            });
         }
 
         function renderTreino(diaIndex, isToday) {
             const treino = treinosSemanais[diaIndex];
             const treinosContainer = document.getElementById('treinos-container');
 
-            // Apenas exercícios do dia atual são clicáveis
+            // Exercícios de hoje e dias passados são clicáveis
+            const diaAtual = new Date().getDay();
+            const isPassadoOuHoje = (diaAtual >= diaIndex) || (diaAtual < diaIndex && (7 - diaIndex + diaAtual) < 0);
+            const habilitado = (diaIndex === diaAtual) || (diaIndex < diaAtual ? true : false);
             const exerciciosHTML = treino.exercicios.map((ex, idx) => 
-                isToday
+                habilitado
                 ? `<li class="treino-exercicio flex items-start">
                         <svg class="w-5 h-5 mr-3 mt-1 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
                         <button class="text-base text-indigo-700 font-medium underline hover:text-indigo-900 focus:outline-none" onclick="abrirModalVideo(${diaIndex}, ${idx})">
